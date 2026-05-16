@@ -130,3 +130,45 @@ def metricas(usuario_email: str = None, usuario_rol: str = "admin"):
         "dimension_vector": 384,
         "uso_estimado_mb": round((total*384*4)/(1024*1024), 3)
     }
+
+# ─── LOG DE CONVERSACIONES DEL AGENTE ───────────────────────────────────────
+
+class ChatLog(BaseModel):
+    usuario_email: str
+    usuario_rol: str
+    pregunta: str
+    respuesta: str
+    registros_usados: int
+    latencia_ms: float
+
+chat_logs: list = []   # En memoria (Día 3). En Día 4 se mueve a ChromaDB.
+
+@app.post("/chat-log")
+def guardar_log(log: ChatLog):
+    entrada = {
+        "id": f"log-{uuid.uuid4().hex[:8]}",
+        "fecha_hora": datetime.utcnow().isoformat(),
+        **log.dict()
+    }
+    chat_logs.append(entrada)
+    return {"guardado": True, "total_logs": len(chat_logs)}
+
+@app.get("/chat-log")
+def obtener_logs(usuario_email: str = None, usuario_rol: str = "admin"):
+    if usuario_rol == "admin":
+        return {"logs": chat_logs, "total": len(chat_logs)}
+    filtrados = [l for l in chat_logs if l.get("usuario_email") == usuario_email]
+    return {"logs": filtrados, "total": len(filtrados)}
+
+@app.get("/chat-log/metricas")
+def metricas_chat():
+    if not chat_logs:
+        return {"total_consultas": 0, "latencia_promedio_ms": 0, "usuarios_unicos": 0}
+    latencias = [l["latencia_ms"] for l in chat_logs]
+    usuarios = set(l["usuario_email"] for l in chat_logs)
+    return {
+        "total_consultas": len(chat_logs),
+        "latencia_promedio_ms": round(sum(latencias) / len(latencias), 2),
+        "usuarios_unicos": len(usuarios),
+        "ultima_consulta": chat_logs[-1]["fecha_hora"] if chat_logs else None
+    }
