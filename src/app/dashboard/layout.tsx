@@ -19,6 +19,7 @@ function Sidebar() {
       ]
     : [
         { href: "/dashboard/cliente", label: "Mis Dispositivos", icon: "📍" },
+        { href: "/registros/nuevo", label: "Nuevo Registro", icon: "➕" },
         { href: "/agente", label: "Agente IA", icon: "🤖" },
       ]
 
