@@ -10,6 +10,12 @@ import { Card, CardContent } from "@/components/ui/card"
 
 type Estado = "ok" | "error" | null
 
+interface Resumen {
+  id: string
+  latencia_ms: number | null
+  fecha_hora: string | null
+}
+
 const TIPOS_EVENTO = [
   "Encendido",
   "Apagado",
@@ -27,20 +33,22 @@ const INPUT_CLASS =
   "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 " +
   "focus:outline-none focus:ring-2 focus:ring-[#2E86AB] focus:border-transparent"
 
+const FORM_INICIAL = {
+  dispositivo_id: "",
+  placa: "",
+  tipo_evento: TIPOS_EVENTO[0],
+  ubicacion: "",
+  descripcion: "",
+  estado_dispositivo: ESTADOS_DISPOSITIVO[0],
+  velocidad: "0",
+}
+
 export default function NuevoRegistroPage() {
-  const [form, setForm] = useState({
-    dispositivo_id: "",
-    placa: "",
-    tipo_evento: TIPOS_EVENTO[0],
-    ubicacion: "",
-    descripcion: "",
-    estado_dispositivo: ESTADOS_DISPOSITIVO[0],
-    velocidad: "0",
-  })
+  const [form, setForm] = useState(FORM_INICIAL)
   const [enviando, setEnviando] = useState(false)
   const [estado, setEstado] = useState<Estado>(null)
-  const [latencia, setLatencia] = useState<number | null>(null)
   const [mensaje, setMensaje] = useState<string>("")
+  const [resumen, setResumen] = useState<Resumen | null>(null)
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(prev => ({ ...prev, [k]: e.target.value }))
@@ -49,8 +57,8 @@ export default function NuevoRegistroPage() {
     e.preventDefault()
     setEnviando(true)
     setEstado(null)
-    setLatencia(null)
     setMensaje("")
+    setResumen(null)
 
     try {
       const res = await fetch("/api/registros", {
@@ -67,13 +75,13 @@ export default function NuevoRegistroPage() {
       }
 
       setEstado("ok")
-      setLatencia(data.latencia_ms ?? null)
-      setMensaje(`Registro guardado · ID ${data.id}`)
-      setForm(prev => ({
-        ...prev,
-        ubicacion: "",
-        descripcion: "",
-      }))
+      setMensaje(`Registro guardado correctamente`)
+      setResumen({
+        id: data.id,
+        latencia_ms: data.latencia_ms ?? null,
+        fecha_hora: data.fecha_hora ?? null,
+      })
+      setForm(FORM_INICIAL)
     } catch {
       setEstado("error")
       setMensaje("No se pudo enviar el formulario")
@@ -95,6 +103,52 @@ export default function NuevoRegistroPage() {
           ← Volver
         </Link>
       </div>
+
+      {/* Resumen de inserción exitosa */}
+      {estado === "ok" && resumen && (
+        <Card className="border-green-300 bg-green-50/40 shadow-sm">
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-2xl">
+                  ✅
+                </div>
+                <div>
+                  <p className="font-semibold text-green-800">Registro guardado correctamente</p>
+                  <Badge className="bg-[#2E86AB] text-white mt-1">
+                    Vector generado correctamente en ChromaDB
+                  </Badge>
+                </div>
+              </div>
+              <Link
+                href="/dashboard/cliente/registros"
+                className="bg-[#1A3C5E] hover:bg-[#2E86AB] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                Ver mis registros →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div className="bg-white rounded-lg border p-3">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">ID generado</p>
+                <p className="font-mono text-sm text-[#1A3C5E] mt-1 break-all">{resumen.id}</p>
+              </div>
+              <div className="bg-white rounded-lg border p-3">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Latencia de inserción</p>
+                <p className="font-mono text-sm text-[#2E86AB] mt-1">
+                  {resumen.latencia_ms != null ? `${resumen.latencia_ms} ms` : "—"}
+                </p>
+              </div>
+              <div className="bg-white rounded-lg border p-3">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Fecha y hora</p>
+                <p className="font-mono text-xs text-gray-700 mt-1">
+                  {resumen.fecha_hora ? new Date(resumen.fecha_hora).toLocaleString("es-EC") : "—"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="shadow-sm">
         <CardContent className="pt-6">
@@ -191,18 +245,6 @@ export default function NuevoRegistroPage() {
               >
                 {enviando ? "Guardando…" : "Guardar registro"}
               </Button>
-
-              {estado === "ok" && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge className="bg-green-100 text-green-800 border border-green-300">
-                    OK
-                  </Badge>
-                  <span className="text-gray-700">{mensaje}</span>
-                  {latencia !== null && (
-                    <Badge className="bg-[#1A3C5E] text-white">{latencia} ms</Badge>
-                  )}
-                </div>
-              )}
 
               {estado === "error" && (
                 <div className="flex items-center gap-2 text-sm">
