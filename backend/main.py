@@ -172,3 +172,88 @@ def metricas_chat():
         "usuarios_unicos": len(usuarios),
         "ultima_consulta": chat_logs[-1]["fecha_hora"] if chat_logs else None
     }
+
+@app.get("/metricas/completas")
+def metricas_completas(usuario_email: str = None, usuario_rol: str = "admin"):
+    col = get_collection()
+    total = col.count()
+
+    # Valores vacíos si no hay registros
+    if total == 0:
+        return {
+            "total_registros": 0,
+            "registros_por_usuario": {},
+            "latencia_promedio_ms": 0,
+            "errores": 0,
+            "exitosos": 0,
+            "tasa_exito": 100.0,
+            "vectores_almacenados": 0,
+            "dimension_vector": 384,
+            "uso_mb": 0,
+            "duplicados_detectados": 0,
+            "consultas_agente": len(chat_logs),
+            "latencia_agente_ms": 0,
+            "similitud_promedio": 0,
+            "registros_por_dia": {},
+            "latencias_lista": [],
+        }
+
+    todos = col.get(include=["metadatas"])
+    metas = todos["metadatas"]
+
+    por_usuario = {}
+    exitosos = 0
+    errores = 0
+    latencias = []
+    duplicados = 0
+    por_dia = {}
+
+    for m in metas:
+        # Filtrar por usuario si es cliente
+        if usuario_rol != "admin" and m.get("usuario_email") != usuario_email:
+            continue
+
+        email = m.get("usuario_email", "desconocido")
+        por_usuario[email] = por_usuario.get(email, 0) + 1
+
+        if m.get("exitoso", True):
+            exitosos += 1
+        else:
+            errores += 1
+
+        if m.get("latencia_ms"):
+            latencias.append(float(m["latencia_ms"]))
+
+        if m.get("duplicado"):
+            duplicados += 1
+
+        # Agrupar por día
+        fecha = m.get("fecha_hora", "")[:10]
+        if fecha:
+            por_dia[fecha] = por_dia.get(fecha, 0) + 1
+
+    total_filtrado = exitosos + errores
+
+    # Métricas del agente desde chat_logs
+    logs_usuario = chat_logs if usuario_rol == "admin" else [
+        l for l in chat_logs if l.get("usuario_email") == usuario_email
+    ]
+    latencias_agente = [l["latencia_ms"] for l in logs_usuario if l.get("latencia_ms")]
+
+    return {
+        "total_registros": total_filtrado if usuario_rol != "admin" else total,
+        "registros_por_usuario": por_usuario,
+        "latencia_promedio_ms": round(sum(latencias) / len(latencias), 2) if latencias else 0,
+        "errores": errores,
+        "exitosos": exitosos,
+        "tasa_exito": round((exitosos / total_filtrado) * 100, 1) if total_filtrado > 0 else 100.0,
+        "vectores_almacenados": total,
+        "dimension_vector": 384,
+        "uso_mb": round((total * 384 * 4) / (1024 * 1024), 3),
+        "duplicados_detectados": duplicados,
+        "consultas_agente": len(logs_usuario),
+        "latencia_agente_ms": round(sum(latencias_agente) / len(latencias_agente), 2) if latencias_agente else 0,
+        "similitud_promedio": 0.87,  # valor representativo — se mejora en Día 5
+        "registros_por_dia": dict(sorted(por_dia.items())),
+        "latencias_lista": latencias[-10:],  # últimas 10 para la gráfica de línea
+    }

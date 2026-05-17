@@ -1,27 +1,23 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8000"
+const BACKEND = process.env.CHROMA_BACKEND_URL || "http://localhost:8000"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await auth()
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-  }
+  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
-  const role = (session.user as any).role ?? "cliente"
-  const url = new URL(`${BACKEND}/metricas`)
-  url.searchParams.set("usuario_email", session.user.email)
-  url.searchParams.set("usuario_rol", role)
+  const email = session.user?.email || ""
+  const rol = (session.user as any)?.role || "cliente"
 
   try {
-    const res = await fetch(url.toString(), { cache: "no-store" })
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
-  } catch (e) {
-    return NextResponse.json(
-      { error: "No se pudo contactar al backend", detalle: String(e) },
-      { status: 502 }
+    const res = await fetch(
+      `${BACKEND}/metricas/completas?usuario_email=${email}&usuario_rol=${rol}`,
+      { cache: "no-store" }
     )
+    const data = await res.json()
+    return NextResponse.json(data)
+  } catch {
+    return NextResponse.json({ error: "Backend no disponible" }, { status: 503 })
   }
 }
