@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { SessionProvider, useSession } from "next-auth/react"
+import { SessionProvider } from "next-auth/react"
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-         XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts"
+         XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 interface Metricas {
   total_registros: number
@@ -23,23 +23,96 @@ interface Metricas {
   latencias_lista: number[]
 }
 
-const NAVY  = "#1A3C5E"
-const AZUL  = "#2E86AB"
-const VERDE = "#2D9E5A"
-const ROJO  = "#E53E3E"
-const WARN  = "#F4A261"
+// ─── Brand tokens ─────────────────────────────────────────────────────────
+const BG       = "#080c14"
+const SURFACE  = "#0d1321"
+const CARD     = "#111827"
+const CARD_2   = "#161f30"
+const HAIRLINE = "rgba(255,255,255,0.06)"
+const BORDER   = "rgba(255,255,255,0.08)"
+const TEXT     = "#e8eaf0"
+const MUTED    = "#8892a4"
+const ACCENT   = "#ff9a00"
+const SUCCESS  = "#16a34a"
+const DANGER   = "#e0392b"
+const WARNING  = "#f59e0b"
+const INFO     = "#3b82f6"
 
-function MetricCard({ label, value, sub, color = NAVY, icon }: {
-  label: string; value: string | number; sub?: string; color?: string; icon: string
-}) {
+const FONT_DISPLAY = "'Syne', system-ui, sans-serif"
+const FONT_MONO    = "'JetBrains Mono', ui-monospace, monospace"
+
+const cardStyle: React.CSSProperties = {
+  background: CARD,
+  border: `1px solid ${HAIRLINE}`,
+  borderRadius: 16,
+  boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+}
+
+function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border shadow-sm p-5 flex flex-col gap-2">
-      <div className="flex items-start justify-between">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-        <span className="text-xl">{icon}</span>
+    <div style={{
+      fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.14em",
+      textTransform: "uppercase", color: ACCENT,
+    }}>{children}</div>
+  )
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 style={{
+      fontSize: "0.7rem", fontWeight: 700, color: MUTED,
+      letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.85rem",
+    }}>{children}</h2>
+  )
+}
+
+function Kpi({ label, value, sub, icon, tone = "accent", big = false }: {
+  label: string
+  value: string | number
+  sub?: string
+  icon: string
+  tone?: "accent" | "success" | "warning" | "danger" | "info" | "violet"
+  big?: boolean
+}) {
+  const tones: Record<string, string> = {
+    accent:  ACCENT,
+    success: SUCCESS,
+    warning: WARNING,
+    danger:  DANGER,
+    info:    INFO,
+    violet:  "#a78bfa",
+  }
+  const color = tones[tone] ?? ACCENT
+  return (
+    <div style={{ ...cardStyle, padding: big ? "1.5rem 1.6rem" : "1.1rem 1.25rem" }}>
+      <div className="flex items-center justify-between">
+        <span style={{
+          fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.1em",
+          color: MUTED, fontWeight: 600,
+        }}>{label}</span>
+        <div
+          className="grid place-items-center"
+          style={{
+            width: 30, height: 30, borderRadius: 8,
+            background: `color-mix(in oklab, ${color} 14%, transparent)`,
+            color: color, fontSize: "0.85rem",
+          }}
+        >
+          <i className={`fa-solid ${icon}`} />
+        </div>
       </div>
-      <p className="text-3xl font-bold" style={{ color }}>{value}</p>
-      {sub && <p className="text-xs text-gray-400">{sub}</p>}
+      <div style={{
+        fontFamily: FONT_MONO, fontWeight: 600,
+        fontSize: big ? "2.6rem" : "1.85rem",
+        marginTop: "0.4rem", letterSpacing: "-0.02em", color: TEXT,
+      }}>
+        {value}
+      </div>
+      {sub && (
+        <div style={{ marginTop: "0.3rem", fontSize: "0.76rem", color: MUTED, fontWeight: 500 }}>
+          {sub}
+        </div>
+      )}
     </div>
   )
 }
@@ -59,21 +132,39 @@ function AdminContent() {
   }, [])
 
   if (error) return (
-    <div className="p-6">
-      <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 text-center">
-        <p className="text-orange-700 font-semibold text-lg">⚠️ Backend Python no disponible</p>
-        <p className="text-gray-500 text-sm mt-2">
-          Ejecuta: <code className="bg-gray-100 px-2 py-1 rounded">cd backend && uvicorn main:app --reload</code>
+    <div className="p-8">
+      <div style={{
+        ...cardStyle,
+        padding: "1.5rem",
+        borderColor: `color-mix(in oklab, ${WARNING} 35%, transparent)`,
+        background: `color-mix(in oklab, ${WARNING} 6%, ${CARD})`,
+      }} className="text-center">
+        <p style={{ color: WARNING, fontWeight: 600, fontSize: "1rem" }}>
+          <i className="fa-solid fa-triangle-exclamation mr-2" /> Backend Python no disponible
+        </p>
+        <p style={{ color: MUTED, fontSize: "0.85rem", marginTop: "0.5rem" }}>
+          Ejecuta:{" "}
+          <code style={{ background: CARD_2, padding: "2px 8px", borderRadius: 6, fontFamily: FONT_MONO }}>
+            cd backend && uvicorn main:app --reload
+          </code>
         </p>
       </div>
     </div>
   )
 
   if (!m) return (
-    <div className="p-6 flex items-center justify-center h-64">
+    <div className="p-8 flex items-center justify-center h-64">
       <div className="text-center space-y-3">
-        <div className="w-8 h-8 border-4 border-[#2E86AB] border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-gray-500 text-sm">Cargando métricas del sistema...</p>
+        <div
+          className="w-9 h-9 rounded-full mx-auto"
+          style={{
+            border: `3px solid ${HAIRLINE}`,
+            borderTopColor: ACCENT,
+            animation: "spin 0.9s linear infinite",
+          }}
+        />
+        <p style={{ color: MUTED, fontSize: "0.85rem" }}>Cargando métricas del sistema...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   )
@@ -81,256 +172,242 @@ function AdminContent() {
   // Datos para gráficas
   const dataPorUsuario = Object.entries(m.registros_por_usuario).map(([email, count]) => ({
     name: email.split("@")[0],
-    registros: count
+    registros: count,
   }))
-
   const dataTorta = [
-    { name: "Exitosos", value: m.exitosos, color: VERDE },
-    { name: "Errores", value: m.errores || 0, color: ROJO }
+    { name: "Exitosos", value: m.exitosos, color: SUCCESS },
+    { name: "Errores",  value: m.errores || 0, color: DANGER },
   ]
-
-  const dataLatencias = m.latencias_lista.map((lat, i) => ({
-    insercion: i + 1,
-    ms: lat
-  }))
-
+  const dataLatencias = m.latencias_lista.map((lat, i) => ({ insercion: i + 1, ms: lat }))
   const dataPorDia = Object.entries(m.registros_por_dia).map(([dia, count]) => ({
-    dia: dia.slice(5), // MM-DD
-    registros: count
+    dia: dia.slice(5),
+    registros: count,
   }))
 
   return (
-    <div className="p-6 space-y-6">
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div>
+      {/* Top bar */}
+      <div
+        className="flex items-center justify-between gap-6 px-8 py-5 sticky top-0 z-10"
+        style={{ background: BG, borderBottom: `1px solid ${HAIRLINE}` }}
+      >
         <div>
-          <h1 className="text-2xl font-bold text-[#1A3C5E]">Dashboard General</h1>
-          <p className="text-sm text-gray-500 mt-1">Sistema Halconsat GPS — vista completa</p>
+          <Eyebrow>Operación · Tiempo real</Eyebrow>
+          <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: "1.55rem", fontWeight: 700, marginTop: 4 }}>
+            Dashboard General
+          </h1>
+          <p style={{ fontSize: "0.82rem", color: MUTED, marginTop: 2 }}>
+            Sistema Halconsat GPS · vista completa
+          </p>
         </div>
-        <span className="bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold px-3 py-1.5 rounded-full">
-          ADMINISTRADOR
-        </span>
-      </div>
-
-      {/* ── SECCIÓN 1: RESUMEN GENERAL (Métricas 1, 4, 5, 7) ── */}
-      <div>
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
-          Resumen General
-        </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard
-            label="① Total Registros GPS"
-            value={m.total_registros}
-            sub="vectores en ChromaDB"
-            color={NAVY} icon="📍"
-          />
-          <MetricCard
-            label="④ Errores de ingreso"
-            value={m.errores}
-            sub="registros fallidos"
-            color={m.errores > 0 ? ROJO : VERDE} icon="⚠️"
-          />
-          <MetricCard
-            label="⑤ Tasa de Éxito"
-            value={`${m.tasa_exito}%`}
-            sub={`${m.exitosos} exitosos`}
-            color={m.tasa_exito >= 90 ? VERDE : WARN} icon="✅"
-          />
-          <MetricCard
-            label="⑦ Consultas al Agente"
-            value={m.consultas_agente}
-            sub="mensajes procesados"
-            color="#7C3AED" icon="🤖"
-          />
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
+            style={{
+              border: `1px solid color-mix(in oklab, ${ACCENT} 35%, transparent)`,
+              background: `color-mix(in oklab, ${ACCENT} 14%, transparent)`,
+              color: ACCENT, fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.05em",
+            }}
+          >
+            <i className="fa-solid fa-user-shield" /> ADMINISTRADOR
+          </span>
         </div>
       </div>
 
-      {/* ── SECCIÓN 2: RENDIMIENTO VECTORIAL (Métricas 3, 6, 10) ── */}
-      <div>
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
-          Rendimiento de la Base Vectorial
-        </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          <MetricCard
-            label="③ Latencia de Inserción"
-            value={`${m.latencia_promedio_ms} ms`}
-            sub="promedio por registro"
-            color={m.latencia_promedio_ms < 500 ? VERDE : WARN} icon="⚡"
-          />
-          <MetricCard
-            label="⑥ Latencia Agente"
-            value={`${m.latencia_agente_ms} ms`}
-            sub="consulta semántica + IA"
-            color={AZUL} icon="🔍"
-          />
-          <MetricCard
-            label="⑩ Almacenamiento Vectorial"
-            value={`${m.uso_mb} MB`}
-            sub={`${m.vectores_almacenados} vectores × ${m.dimension_vector}D`}
-            color={NAVY} icon="🧠"
-          />
-        </div>
-      </div>
+      <div className="px-8 py-6 space-y-7">
 
-      {/* ── SECCIÓN 3: ACTIVIDAD (Métrica 2 — gráfica de barras) ── */}
-      <div>
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
-          ② Actividad por Usuario
-        </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-          {/* Gráfica de barras — registros por usuario */}
-          <div className="bg-white rounded-xl border shadow-sm p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-4">Registros por usuario</p>
-            {dataPorUsuario.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={dataPorUsuario}>
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="registros" fill={AZUL} radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-                Sin registros aún
-              </div>
-            )}
-          </div>
-
-          {/* Gráfica de barras — registros por día */}
-          <div className="bg-white rounded-xl border shadow-sm p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-4">Registros por día</p>
-            {dataPorDia.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={dataPorDia}>
-                  <XAxis dataKey="dia" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="registros" fill={VERDE} radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-                Sin datos de días aún
-              </div>
-            )}
+        {/* ── RESUMEN GENERAL ── */}
+        <div>
+          <SectionTitle>Resumen General</SectionTitle>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Kpi label="① Total Registros GPS" value={m.total_registros} sub="vectores en ChromaDB" icon="fa-location-dot" tone="accent" />
+            <Kpi label="④ Errores de ingreso"    value={m.errores}        sub="registros fallidos" icon="fa-triangle-exclamation" tone={m.errores > 0 ? "danger" : "success"} />
+            <Kpi label="⑤ Tasa de Éxito"          value={`${m.tasa_exito}%`} sub={`${m.exitosos} exitosos`} icon="fa-circle-check" tone={m.tasa_exito >= 90 ? "success" : "warning"} />
+            <Kpi label="⑦ Consultas al Agente"    value={m.consultas_agente} sub="mensajes procesados" icon="fa-robot" tone="violet" />
           </div>
         </div>
-      </div>
 
-      {/* ── SECCIÓN 4: CALIDAD (Métricas 8 y 9) ── */}
-      <div>
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
-          Calidad de los Datos
-        </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* ── RENDIMIENTO VECTORIAL ── */}
+        <div>
+          <SectionTitle>Rendimiento de la Base Vectorial</SectionTitle>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <Kpi label="③ Latencia de Inserción" value={`${m.latencia_promedio_ms} ms`} sub="promedio por registro" icon="fa-bolt" tone={m.latencia_promedio_ms < 500 ? "success" : "warning"} />
+            <Kpi label="⑥ Latencia Agente"        value={`${m.latencia_agente_ms} ms`}   sub="consulta semántica + IA" icon="fa-magnifying-glass" tone="info" />
+            <Kpi label="⑩ Almacenamiento Vectorial" value={`${m.uso_mb} MB`} sub={`${m.vectores_almacenados} vectores × ${m.dimension_vector}D`} icon="fa-brain" tone="accent" />
+          </div>
+        </div>
 
-          {/* Torta — tasa de éxito */}
-          <div className="bg-white rounded-xl border shadow-sm p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-4">⑤ Distribución exitosos / errores</p>
-            <div className="flex items-center gap-6">
-              <ResponsiveContainer width="50%" height={160}>
-                <PieChart>
-                  <Pie
-                    data={dataTorta}
-                    cx="50%" cy="50%"
-                    innerRadius={45} outerRadius={70}
-                    dataKey="value"
-                  >
-                    {dataTorta.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-2">
-                {dataTorta.map((d, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ background: d.color }} />
-                    <span className="text-sm text-gray-600">{d.name}: <strong>{d.value}</strong></span>
-                  </div>
-                ))}
+        {/* ── ACTIVIDAD ── */}
+        <div>
+          <SectionTitle>② Actividad por Usuario</SectionTitle>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            <div style={{ ...cardStyle, padding: "1.25rem" }}>
+              <p style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, marginBottom: "1rem" }}>
+                Registros por usuario
+              </p>
+              {dataPorUsuario.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={dataPorUsuario}>
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: MUTED }} stroke={HAIRLINE} />
+                    <YAxis tick={{ fontSize: 11, fill: MUTED }} stroke={HAIRLINE} />
+                    <Tooltip
+                      contentStyle={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, color: TEXT }}
+                      cursor={{ fill: `color-mix(in oklab, ${ACCENT} 8%, transparent)` }}
+                    />
+                    <Bar dataKey="registros" fill={ACCENT} radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-48 grid place-items-center" style={{ color: MUTED, fontSize: "0.85rem" }}>
+                  Sin registros aún
+                </div>
+              )}
+            </div>
+
+            <div style={{ ...cardStyle, padding: "1.25rem" }}>
+              <p style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, marginBottom: "1rem" }}>
+                Registros por día
+              </p>
+              {dataPorDia.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={dataPorDia}>
+                    <XAxis dataKey="dia" tick={{ fontSize: 11, fill: MUTED }} stroke={HAIRLINE} />
+                    <YAxis tick={{ fontSize: 11, fill: MUTED }} stroke={HAIRLINE} />
+                    <Tooltip
+                      contentStyle={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, color: TEXT }}
+                      cursor={{ fill: `color-mix(in oklab, ${SUCCESS} 8%, transparent)` }}
+                    />
+                    <Bar dataKey="registros" fill={SUCCESS} radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-48 grid place-items-center" style={{ color: MUTED, fontSize: "0.85rem" }}>
+                  Sin datos de días aún
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+
+        {/* ── CALIDAD ── */}
+        <div>
+          <SectionTitle>Calidad de los Datos</SectionTitle>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            <div style={{ ...cardStyle, padding: "1.25rem" }}>
+              <p style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, marginBottom: "1rem" }}>
+                ⑤ Distribución exitosos / errores
+              </p>
+              <div className="flex items-center gap-6">
+                <ResponsiveContainer width="50%" height={160}>
+                  <PieChart>
+                    <Pie data={dataTorta} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" stroke={SURFACE}>
+                      {dataTorta.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, color: TEXT }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-2">
+                  {dataTorta.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ background: d.color }} />
+                      <span style={{ fontSize: "0.85rem", color: TEXT }}>
+                        {d.name}: <strong style={{ fontFamily: FONT_MONO }}>{d.value}</strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Cards métricas 8 y 9 */}
-          <div className="grid grid-cols-1 gap-4">
-            <MetricCard
-              label="⑧ Similitud promedio en búsquedas"
-              value={`${(m.similitud_promedio * 100).toFixed(0)}%`}
-              sub="precisión de recuperación semántica"
-              color={VERDE} icon="🎯"
-            />
-            <MetricCard
-              label="⑨ Duplicados detectados"
-              value={m.duplicados_detectados}
-              sub="registros con similitud > 92%"
-              color={m.duplicados_detectados > 0 ? WARN : VERDE} icon="🔁"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ── SECCIÓN 5: LATENCIAS (Métrica 3 — gráfica de línea) ── */}
-      {dataLatencias.length > 1 && (
-        <div>
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
-            ③ Latencia de Inserción — últimas {dataLatencias.length} operaciones
-          </h2>
-          <div className="bg-white rounded-xl border shadow-sm p-5">
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={dataLatencias}>
-                <XAxis dataKey="insercion" tick={{ fontSize: 11 }} label={{ value: "Inserción #", position: "insideBottom", offset: -2 }} />
-                <YAxis tick={{ fontSize: 11 }} unit="ms" />
-                <Tooltip formatter={(v) => [`${v} ms`, "Latencia"]} />
-                <Line
-                  type="monotone" dataKey="ms"
-                  stroke={AZUL} strokeWidth={2}
-                  dot={{ fill: AZUL, r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="grid grid-cols-1 gap-4">
+              <Kpi
+                label="⑧ Similitud promedio en búsquedas"
+                value={`${(m.similitud_promedio * 100).toFixed(0)}%`}
+                sub="precisión de recuperación semántica"
+                icon="fa-bullseye"
+                tone="success"
+              />
+              <Kpi
+                label="⑨ Duplicados detectados"
+                value={m.duplicados_detectados}
+                sub="registros con similitud > 92%"
+                icon="fa-clone"
+                tone={m.duplicados_detectados > 0 ? "warning" : "success"}
+              />
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Tabla desglose por usuario */}
-      {Object.keys(m.registros_por_usuario).length > 0 && (
-        <div>
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">
-            Desglose por usuario
-          </h2>
-          <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-[#1A3C5E] text-white">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold">Usuario</th>
-                  <th className="text-center px-4 py-3 font-semibold">Registros</th>
-                  <th className="text-center px-4 py-3 font-semibold">% del total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(m.registros_por_usuario).map(([email, count], i) => (
-                  <tr key={email} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                    <td className="px-4 py-3 text-gray-700">{email}</td>
-                    <td className="px-4 py-3 text-center font-bold text-[#1A3C5E]">{count}</td>
-                    <td className="px-4 py-3 text-center text-gray-500">
-                      {m.total_registros > 0
-                        ? `${((count / m.total_registros) * 100).toFixed(1)}%`
-                        : "—"}
-                    </td>
+        {/* ── LATENCIAS ── */}
+        {dataLatencias.length > 1 && (
+          <div>
+            <SectionTitle>③ Latencia de Inserción — últimas {dataLatencias.length} operaciones</SectionTitle>
+            <div style={{ ...cardStyle, padding: "1.25rem" }}>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={dataLatencias}>
+                  <XAxis dataKey="insercion" tick={{ fontSize: 11, fill: MUTED }} stroke={HAIRLINE}
+                         label={{ value: "Inserción #", position: "insideBottom", offset: -2, fill: MUTED, fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11, fill: MUTED }} stroke={HAIRLINE} unit="ms" />
+                  <Tooltip
+                    contentStyle={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, color: TEXT }}
+                    formatter={(v) => [`${v} ms`, "Latencia"]}
+                  />
+                  <Line type="monotone" dataKey="ms" stroke={ACCENT} strokeWidth={2}
+                        dot={{ fill: ACCENT, r: 4, stroke: SURFACE, strokeWidth: 2 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* ── DESGLOSE TABLA ── */}
+        {Object.keys(m.registros_por_usuario).length > 0 && (
+          <div>
+            <SectionTitle>Desglose por usuario</SectionTitle>
+            <div style={{ ...cardStyle, overflow: "hidden" }}>
+              <table className="w-full" style={{ fontSize: "0.85rem", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    {["Usuario", "Registros", "% del total"].map((h, i) => (
+                      <th
+                        key={h}
+                        style={{
+                          textAlign: i === 0 ? "left" : "center",
+                          fontSize: "0.7rem", fontWeight: 600, color: MUTED,
+                          textTransform: "uppercase", letterSpacing: "0.08em",
+                          padding: "0.9rem 1rem", background: CARD_2,
+                          borderBottom: `1px solid ${HAIRLINE}`,
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {Object.entries(m.registros_por_usuario).map(([email, count]) => (
+                    <tr key={email} style={{ borderBottom: `1px solid ${HAIRLINE}` }}>
+                      <td style={{ padding: "0.85rem 1rem", color: TEXT }}>{email}</td>
+                      <td style={{ padding: "0.85rem 1rem", textAlign: "center", fontFamily: FONT_MONO, color: ACCENT, fontWeight: 600 }}>
+                        {count}
+                      </td>
+                      <td style={{ padding: "0.85rem 1rem", textAlign: "center", color: MUTED, fontFamily: FONT_MONO }}>
+                        {m.total_registros > 0
+                          ? `${((count / m.total_registros) * 100).toFixed(1)}%`
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
+      </div>
     </div>
   )
 }

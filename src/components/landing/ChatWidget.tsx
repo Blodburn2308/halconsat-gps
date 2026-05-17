@@ -3,126 +3,164 @@
 import { useState, useRef, useEffect } from "react"
 
 interface Mensaje {
-  role: "user" | "assistant"
-  content: string
+  from: "bot" | "user"
+  text: string
+  time: string
+  quick?: string[]
+}
+
+const ahora = () => {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
 }
 
 export default function ChatWidget() {
-  const [abierto, setAbierto] = useState(false)
-  const [mensajes, setMensajes] = useState<Mensaje[]>([
-    {
-      role: "assistant",
-      content: "¡Hola! Soy el agente de HalconSat 🛰️ ¿En qué puedo ayudarte hoy? Puedo contarte sobre nuestros servicios de rastreo GPS, planes y más."
-    }
+  const [open, setOpen] = useState(false)
+  const [msgs, setMsgs] = useState<Mensaje[]>([
+    { from: "bot", text: "¡Hola! Soy Halcón, el asistente de HalconSat 🦅", time: "08:32" },
+    { from: "bot", text: "¿Qué te trae por aquí hoy?", time: "08:32", quick: ["Cotizar instalación", "Ya soy cliente", "Soporte técnico"] },
   ])
   const [input, setInput] = useState("")
+  const [typing, setTyping] = useState(false)
   const [cargando, setCargando] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (bodyRef.current) {
-      bodyRef.current.scrollTop = bodyRef.current.scrollHeight
-    }
-  }, [mensajes, cargando])
+    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
+  }, [msgs, typing, open])
 
-  const enviar = async () => {
-    const texto = input.trim()
-    if (!texto || cargando) return
+  const send = async (texto: string) => {
+    const text = texto.trim()
+    if (!text || cargando) return
 
-    const nuevosMensajes: Mensaje[] = [...mensajes, { role: "user", content: texto }]
-    setMensajes(nuevosMensajes)
+    const t = ahora()
+    const nuevos: Mensaje[] = [...msgs, { from: "user", text, time: t }]
+    setMsgs(nuevos)
     setInput("")
+    setTyping(true)
     setCargando(true)
 
     try {
-      const historial = nuevosMensajes.slice(0, -1).map(m => ({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: m.content
-      }))
+      const historial = nuevos.slice(0, -1)
+        .filter(m => !m.quick) // no enviamos quick replies como historial
+        .map(m => ({
+          role: m.from === "bot" ? "assistant" : "user",
+          content: m.text,
+        }))
 
       const res = await fetch("/api/chat-publico", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mensaje: texto, historial })
+        body: JSON.stringify({ mensaje: text, historial }),
       })
-
       const data = await res.json()
-      setMensajes(prev => [...prev, { role: "assistant", content: data.respuesta }])
+      setMsgs(prev => [...prev, {
+        from: "bot",
+        text: data.respuesta || "Perfecto, te paso con un asesor humano. ¿Prefieres que te llamemos o seguimos por aquí?",
+        time: ahora(),
+        quick: data.respuesta ? undefined : ["Llamarme", "Seguir chat"],
+      }])
     } catch {
-      setMensajes(prev => [
-        ...prev,
-        { role: "assistant", content: "Hubo un error. Escríbenos al WhatsApp." }
-      ])
+      setMsgs(prev => [...prev, {
+        from: "bot",
+        text: "Hubo un error de conexión. Escríbenos al WhatsApp +593 99 999 9999.",
+        time: ahora(),
+      }])
     } finally {
+      setTyping(false)
       setCargando(false)
     }
   }
 
-  const handleKey = (e: React.KeyboardEvent) => {
+  const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      enviar()
+      send(input)
     }
   }
 
   return (
-    <div className="hs-chat-fab">
-      <div className={`hs-chat-window ${abierto ? "open" : ""}`}>
-        <div className="hs-chat-header">
-          <div className="hs-chat-header-info">
-            <div className="hs-chat-avatar">🤖</div>
+    <div className="chat-fab">
+      <div className={`chat-window ${open ? "is-open" : ""}`}>
+        <div className="chat-header">
+          <div className="chat-header-info">
+            <div className="chat-avatar">
+              <i className="fa-solid fa-satellite-dish" />
+            </div>
             <div>
-              <h4>Agente HalconSat</h4>
-              <div className="hs-chat-status">En línea</div>
+              <h4>Halcón · Asistente</h4>
+              <div className="chat-status">
+                <span className="pulse" />En línea — responde en ~1 min
+              </div>
             </div>
           </div>
-          <button className="hs-chat-close" onClick={() => setAbierto(false)}>✕</button>
+          <button className="btn-icon" onClick={() => setOpen(false)} aria-label="Cerrar chat">
+            <i className="fa-solid fa-xmark" />
+          </button>
         </div>
 
-        <div className="hs-chat-body" ref={bodyRef}>
-          {mensajes.map((m, i) => (
-            <div key={i} className={`hs-msg ${m.role === "assistant" ? "bot" : "user"}`}>
-              {m.role === "assistant" && (
-                <div className="hs-msg-icon">🤖</div>
+        <div className="chat-body" ref={bodyRef}>
+          {msgs.map((m, i) => (
+            <div key={i} className={`msg msg-${m.from}`}>
+              {m.from === "bot" && (
+                <div className="msg-avatar">
+                  <i className="fa-solid fa-satellite-dish" />
+                </div>
               )}
-              <div className="hs-msg-bubble">{m.content}</div>
+              <div>
+                <div className="msg-bubble">{m.text}</div>
+                {m.quick && (
+                  <div className="msg-quick">
+                    {m.quick.map((q, j) => (
+                      <button key={j} onClick={() => send(q)} disabled={cargando}>{q}</button>
+                    ))}
+                  </div>
+                )}
+                <div className="msg-time">{m.time}</div>
+              </div>
             </div>
           ))}
 
-          {cargando && (
-            <div className="hs-msg bot">
-              <div className="hs-msg-icon">🤖</div>
-              <div className="hs-msg-bubble">
-                <div className="hs-typing">
-                  <span /><span /><span />
-                </div>
+          {typing && (
+            <div className="msg msg-bot">
+              <div className="msg-avatar">
+                <i className="fa-solid fa-satellite-dish" />
+              </div>
+              <div className="msg-bubble" style={{ padding: ".65rem 1rem" }}>
+                <div className="typing-dots"><span /><span /><span /></div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="hs-chat-footer">
+        <form
+          className="chat-footer"
+          onSubmit={(e) => { e.preventDefault(); send(input) }}
+        >
+          <button type="button" className="btn-icon" title="Adjuntar">
+            <i className="fa-solid fa-paperclip" />
+          </button>
           <input
-            type="text"
-            className="hs-chat-input"
-            placeholder="Escribe tu mensaje…"
             value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKey}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKey}
+            placeholder="Escribe tu mensaje…"
+            autoComplete="off"
             disabled={cargando}
           />
-          <button className="hs-chat-send" onClick={enviar} disabled={cargando}>
-            ➤
+          <button type="submit" className="chat-send" disabled={cargando || !input.trim()}>
+            <i className="fa-solid fa-paper-plane" />
           </button>
-        </div>
+        </form>
       </div>
 
       <button
-        className="hs-chat-toggle"
-        onClick={() => setAbierto(!abierto)}
-        aria-label="Abrir chat"
+        className={`chat-toggle ${open ? "is-open" : ""}`}
+        onClick={() => setOpen(o => !o)}
+        aria-label={open ? "Cerrar chat" : "Abrir chat"}
       >
-        {abierto ? "✕" : "💬"}
+        <i className={`fa-solid ${open ? "fa-xmark" : "fa-comments"}`} />
+        {!open && <span className="chat-toggle-badge">2</span>}
       </button>
     </div>
   )

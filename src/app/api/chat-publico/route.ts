@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 
+const GROQ_KEY = process.env.GROQ_API_KEY
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+const GROQ_MODEL = "llama-3.1-8b-instant"
+
 export async function POST(request: NextRequest) {
   const { mensaje, historial = [] } = await request.json()
 
@@ -7,31 +11,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Mensaje vacío" }, { status: 400 })
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
+  if (!GROQ_KEY) {
     return NextResponse.json(
       { respuesta: "El agente no está disponible en este momento. Contáctanos al +593 999 999 999." },
       { status: 200 }
     )
   }
 
-  try {
-    const messages = [
-      ...historial.slice(-6),
-      { role: "user", content: mensaje }
-    ]
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 400,
-        system: `Eres el asistente virtual de HalconSat, empresa ecuatoriana de seguridad vehicular GPS ubicada en Ibarra, Ecuador.
+  const systemPrompt = `Eres el asistente virtual de HalconSat, empresa ecuatoriana de seguridad vehicular GPS ubicada en Ibarra, Ecuador.
 
 Tu personalidad: amigable, profesional, conciso. Responde SIEMPRE en español.
 Usa máximo 3-4 oraciones por respuesta. Sin listas largas.
@@ -45,23 +32,41 @@ INFORMACIÓN DE HALCONSAT:
 
 Si preguntan por precios exactos, diles que ofrecemos cotización personalizada sin compromiso.
 Si preguntan algo que no sabes, recomienda contactarlos al WhatsApp.
-No inventes información.`,
+No inventes información.`
+
+  const messages = [
+    { role: "system", content: systemPrompt },
+    ...historial.slice(-6).map((m: any) => ({
+      role: m.role,
+      content: m.content,
+    })),
+    { role: "user", content: mensaje },
+  ]
+
+  try {
+    const resGroq = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GROQ_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        max_tokens: 400,
         messages,
       }),
     })
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const respuesta = data.content[0]?.text || "No pude procesar tu pregunta. Intenta de nuevo."
+    if (!resGroq.ok) throw new Error(`Groq API error ${resGroq.status}`)
+    const data = await resGroq.json()
+    const respuesta =
+      data.choices?.[0]?.message?.content || "No pude procesar tu pregunta. Intenta de nuevo."
 
     return NextResponse.json({ respuesta })
   } catch (error) {
     console.error("Error en chat público:", error)
     return NextResponse.json({
-      respuesta: "Hubo un problema con el agente. Escríbenos al WhatsApp: +593 999 999 999"
+      respuesta: "Hubo un problema con el agente. Escríbenos al WhatsApp: +593 999 999 999",
     })
   }
 }
