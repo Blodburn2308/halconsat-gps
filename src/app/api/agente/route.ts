@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 
 const BACKEND = process.env.CHROMA_BACKEND_URL || "http://localhost:8000"
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
+const GROQ_KEY = process.env.GROQ_API_KEY
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+const GROQ_MODEL = "llama-3.1-8b-instant"
 
 export async function POST(request: NextRequest) {
   const session = await auth()
@@ -56,10 +58,10 @@ Registro ${i + 1} (similitud: ${r.similitud}):
 `.trim()).join("\n\n")
     : "No se encontraron registros GPS similares a la consulta."
 
-  // ── PASO 3: Llamar a Claude API ──────────────────────────────────────────
-  if (!ANTHROPIC_KEY) {
+  // ── PASO 3: Llamar a Groq API ────────────────────────────────────────────
+  if (!GROQ_KEY) {
     return NextResponse.json({
-      respuesta: "El agente no está configurado. Agrega ANTHROPIC_API_KEY al .env.local",
+      respuesta: "El agente no está configurado. Agrega GROQ_API_KEY al .env.local",
       registros_usados: 0,
       latencia_busqueda_ms: latenciaBusqueda,
       latencia_total_ms: Date.now() - inicio
@@ -88,6 +90,7 @@ INSTRUCCIONES:
 - No inventes datos que no estén en los registros`
 
   const messages = [
+    { role: "system", content: systemPrompt },
     ...historial.slice(-8).map((m: any) => ({
       role: m.role,
       content: m.content
@@ -96,24 +99,22 @@ INSTRUCCIONES:
   ]
 
   try {
-    const resClAude = await fetch("https://api.anthropic.com/v1/messages", {
+    const resGroq = await fetch(GROQ_URL, {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json"
+        "Authorization": `Bearer ${GROQ_KEY}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: GROQ_MODEL,
         max_tokens: 500,
-        system: systemPrompt,
         messages
       })
     })
 
-    if (!resClAude.ok) throw new Error(`Claude API error ${resClAude.status}`)
-    const dataClAude = await resClAude.json()
-    const respuesta = dataClAude.content?.[0]?.text || "No pude procesar tu pregunta."
+    if (!resGroq.ok) throw new Error(`Groq API error ${resGroq.status}`)
+    const dataGroq = await resGroq.json()
+    const respuesta = dataGroq.choices?.[0]?.message?.content || "Sin respuesta"
     const latenciaTotal = Date.now() - inicio
 
     // ── PASO 4: Guardar log de la conversación ─────────────────────────────
@@ -139,7 +140,7 @@ INSTRUCCIONES:
 
   } catch (error) {
     return NextResponse.json(
-      { error: "Error al contactar Claude API", detalle: String(error) },
+      { error: "Error al contactar Groq API", detalle: String(error) },
       { status: 500 }
     )
   }
