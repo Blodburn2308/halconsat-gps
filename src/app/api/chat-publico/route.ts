@@ -4,6 +4,39 @@ const GROQ_KEY = process.env.GROQ_API_KEY
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 const GROQ_MODEL = "llama-3.1-8b-instant"
 
+type Idioma = "en" | "pt" | "es"
+
+const PALABRAS_EN = [
+  "the", "is", "are", "what", "how", "where", "when", "why", "who",
+  "hello", "hi", "hey", "please", "thanks", "thank", "you", "your",
+  "do", "does", "can", "could", "would", "will", "have", "has",
+  "price", "cost", "gps", "tracking", "vehicle", "car", "service",
+]
+
+const PALABRAS_PT = [
+  "você", "voce", "obrigado", "obrigada", "olá", "ola", "oi",
+  "como", "onde", "quando", "porque", "porquê", "quê", "não", "nao",
+  "preço", "preco", "carro", "veículo", "veiculo", "rastreamento",
+  "está", "esta", "tem", "fazer", "muito", "também", "tambem",
+]
+
+function detectarIdioma(texto: string): Idioma {
+  const t = ` ${texto.toLowerCase()} `
+  let scoreEn = 0
+  let scorePt = 0
+  for (const p of PALABRAS_EN) if (t.includes(` ${p} `)) scoreEn++
+  for (const p of PALABRAS_PT) if (t.includes(` ${p} `)) scorePt++
+  if (scorePt > scoreEn && scorePt >= 1) return "pt"
+  if (scoreEn > scorePt && scoreEn >= 1) return "en"
+  return "es"
+}
+
+const INSTRUCCION_IDIOMA: Record<Idioma, string> = {
+  en: "CRITICAL LANGUAGE LOCK: The user wrote in ENGLISH. Your entire reply MUST be written in ENGLISH only. Do NOT use any Spanish words. Do NOT translate the company name.",
+  pt: "CRITICAL LANGUAGE LOCK: O usuário escreveu em PORTUGUÊS. Sua resposta inteira DEVE ser escrita SOMENTE em português. NÃO use palavras em espanhol.",
+  es: "INSTRUCCIÓN DE IDIOMA: El usuario escribió en ESPAÑOL. Responde completamente en español.",
+}
+
 export async function POST(request: NextRequest) {
   const { mensaje, historial = [] } = await request.json()
 
@@ -18,7 +51,9 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const systemPrompt = `LANGUAGE RULE (HIGHEST PRIORITY): Detect the language of the user's most recent message and ALWAYS reply in that exact same language. English in → English out. Spanish in → Spanish out. Portuguese in → Portuguese out. Any language in → same language out. Do NOT default to Spanish. Do NOT switch languages mid-conversation unless the user does.
+  const idioma = detectarIdioma(mensaje)
+
+  const systemPrompt = `${INSTRUCCION_IDIOMA[idioma]}
 
 Eres el asistente virtual de HalconSat, empresa ecuatoriana de seguridad vehicular GPS ubicada en Ibarra, Ecuador.
 
@@ -36,7 +71,7 @@ Si preguntan por precios exactos, diles que ofrecemos cotización personalizada 
 Si preguntan algo que no sabes, recomienda contactarlos al WhatsApp.
 No inventes información.
 
-FINAL REMINDER — LANGUAGE: Your reply MUST be in the same language as the user's last message. No exceptions, no defaults to Spanish.`
+${INSTRUCCION_IDIOMA[idioma]}`
 
   const messages = [
     { role: "system", content: systemPrompt },
