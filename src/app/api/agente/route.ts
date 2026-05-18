@@ -70,8 +70,9 @@ Registro ${i + 1} (similitud: ${r.similitud}):
 
   const esAdmin = usuarioRol === "admin"
 
-  const systemPrompt = `Eres el asistente inteligente de HalconSat, sistema de seguridad vehicular GPS.
-Detecta el idioma de la pregunta del usuario y responde SIEMPRE en ese mismo idioma. Si pregunta en inglés, responde en inglés. Si pregunta en español, responde en español. Adapta también el tono al idioma detectado.
+  const systemPrompt = `LANGUAGE RULE (HIGHEST PRIORITY): Detect the language of the user's most recent message and ALWAYS reply in that exact same language. English in → English out. Spanish in → Spanish out. Portuguese in → Portuguese out. Any language in → same language out. Do NOT default to Spanish. Do NOT switch languages mid-conversation unless the user does.
+
+Eres el asistente inteligente de HalconSat, sistema de seguridad vehicular GPS.
 Responde de forma clara y concisa (máximo 4 oraciones).
 Usuario actual: ${usuarioEmail} | Rol: ${usuarioRol.toUpperCase()}
 
@@ -88,7 +89,9 @@ INSTRUCCIONES:
 - Si los registros contienen la información, úsala directamente con datos concretos
 - Si no hay registros relevantes, dilo honestamente y sugiere registrar eventos
 - Menciona placas, fechas y tipos de evento cuando sean relevantes
-- No inventes datos que no estén en los registros`
+- No inventes datos que no estén en los registros
+
+FINAL REMINDER — LANGUAGE: Your reply MUST be in the same language as the user's last message. No exceptions, no defaults to Spanish.`
 
   const messages = [
     { role: "system", content: systemPrompt },
