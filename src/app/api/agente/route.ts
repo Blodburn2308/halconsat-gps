@@ -71,7 +71,8 @@ Registro ${i + 1} (similitud: ${r.similitud}):
   const esAdmin = usuarioRol === "admin"
 
   const systemPrompt = `Eres el asistente inteligente de HalconSat, sistema de seguridad vehicular GPS.
-Respondes en español, de forma clara y concisa (máximo 4 oraciones).
+Detecta el idioma de la pregunta del usuario y responde SIEMPRE en ese mismo idioma. Si pregunta en inglés, responde en inglés. Si pregunta en español, responde en español. Adapta también el tono al idioma detectado.
+Responde de forma clara y concisa (máximo 4 oraciones).
 Usuario actual: ${usuarioEmail} | Rol: ${usuarioRol.toUpperCase()}
 
 ${esAdmin
