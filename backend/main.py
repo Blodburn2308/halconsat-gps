@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-import time, uuid
+import time, uuid, json, os
 from datetime import datetime
 from chroma_client import get_collection, get_knowledge_collection
 from seed_halconsat import seed_knowledge
@@ -257,3 +257,95 @@ def metricas_completas(usuario_email: str = None, usuario_rol: str = "admin"):
         "registros_por_dia": dict(sorted(por_dia.items())),
         "latencias_lista": latencias[-10:],  # últimas 10 para la gráfica de línea
     }
+
+
+# ─── GESTIÓN DE USUARIOS ────────────────────────────────────────────────────
+
+USUARIOS_PATH = os.path.join(os.path.dirname(__file__), "usuarios.json")
+
+
+class UsuarioCreate(BaseModel):
+    nombre: str
+    email: str
+    password: str
+    placa: str
+    dispositivo_id: str
+
+
+class UsuarioUpdate(BaseModel):
+    nombre: Optional[str] = None
+    placa: Optional[str] = None
+    dispositivo_id: Optional[str] = None
+    activo: Optional[bool] = None
+
+
+def leer_usuarios():
+    if not os.path.exists(USUARIOS_PATH):
+        return []
+    with open(USUARIOS_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def guardar_usuarios(usuarios):
+    with open(USUARIOS_PATH, "w", encoding="utf-8") as f:
+        json.dump(usuarios, f, indent=2, ensure_ascii=False)
+
+
+@app.get("/usuarios")
+def listar_usuarios():
+    usuarios = leer_usuarios()
+    clientes = [u for u in usuarios if u.get("rol") == "cliente"]
+    return {"usuarios": clientes, "total": len(clientes)}
+
+
+@app.post("/usuarios")
+def crear_usuario(u: UsuarioCreate):
+    usuarios = leer_usuarios()
+    if any(x["email"].lower() == u.email.lower() for x in usuarios):
+        raise HTTPException(status_code=409, detail="Email ya registrado")
+    nuevo = {
+        "id": f"usr-{uuid.uuid4().hex[:6]}",
+        "nombre": u.nombre,
+        "email": u.email,
+        "password": u.password,
+        "rol": "cliente",
+        "placa": u.placa,
+        "dispositivo_id": u.dispositivo_id,
+        "activo": True,
+        "fecha_creacion": datetime.utcnow().isoformat(),
+    }
+    usuarios.append(nuevo)
+    guardar_usuarios(usuarios)
+    return {"creado": True, "usuario": nuevo}
+
+
+@app.put("/usuarios/{usuario_id}")
+def editar_usuario(usuario_id: str, cambios: UsuarioUpdate):
+    usuarios = leer_usuarios()
+    for u in usuarios:
+        if u["id"] == usuario_id:
+            datos = cambios.dict(exclude_unset=True)
+            u.update(datos)
+            guardar_usuarios(usuarios)
+            return {"actualizado": True, "usuario": u}
+    raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+
+@app.delete("/usuarios/{usuario_id}")
+def eliminar_usuario(usuario_id: str):
+    usuarios = leer_usuarios()
+    for u in usuarios:
+        if u["id"] == usuario_id:
+            u["activo"] = False
+            guardar_usuarios(usuarios)
+            return {"eliminado": True, "usuario": u}
+    raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+
+@app.get("/usuarios/verificar")
+def verificar_usuario(email: str, password: str):
+    usuarios = leer_usuarios()
+    for u in usuarios:
+        if u["email"].lower() == email.lower() and u["password"] == password:
+            return u
+    raise HTTPException(status_code=401, detail="Credenciales invalidas")

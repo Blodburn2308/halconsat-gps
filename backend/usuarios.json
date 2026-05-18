@@ -1,0 +1,24 @@
+[
+  {
+    "id": "usr-001",
+    "nombre": "Admin Halconsat",
+    "email": "admin@halconsat.com",
+    "password": "admin123",
+    "rol": "admin",
+    "placa": null,
+    "dispositivo_id": null,
+    "activo": true,
+    "fecha_creacion": "2026-01-01T00:00:00"
+  },
+  {
+    "id": "usr-002",
+    "nombre": "Carlos Méndez",
+    "email": "cliente@halconsat.com",
+    "password": "cliente123",
+    "rol": "cliente",
+    "placa": "ABC-1234",
+    "dispositivo_id": "GPS-HAL-00001",
+    "activo": true,
+    "fecha_creacion": "2026-01-01T00:00:00"
+  }
+]
