@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
   if (!GROQ_KEY) {
     return NextResponse.json(
-      { respuesta: "El agente no está disponible en este momento. Contáctanos al +593 999 999 999." },
+      { respuesta: "El agente no está disponible en este momento. Contáctanos al +593 96 967 2237." },
       { status: 200 }
     )
   }
@@ -26,7 +26,7 @@ Usa máximo 3-4 oraciones por respuesta. Sin listas largas.
 INFORMACIÓN DE HALCONSAT:
 - Servicio: rastreo GPS en tiempo real, alertas de robo, control de geocercas, historial de rutas, control de velocidad, botón SOS
 - Planes: Básico (rastreo + historial 30 días), Estándar (+ geocercas + alertas velocidad), Premium (+ SOS + monitoreo 24/7)
-- Contacto: +593 999 999 999 | info@halconsat.com | Ibarra, Ecuador
+- Contacto: +593 96 967 2237 | info@halconsat.com | Ibarra, Ecuador
 - El dispositivo se instala profesionalmente y envía posición cada 30 segundos en movimiento
 - Compatible con cualquier vehículo: autos, camionetas, motos, flotas empresariales
 
@@ -66,7 +66,7 @@ No inventes información.`
   } catch (error) {
     console.error("Error en chat público:", error)
     return NextResponse.json({
-      respuesta: "Hubo un problema con el agente. Escríbenos al WhatsApp: +593 999 999 999",
+      respuesta: "Hubo un problema con el agente. Escríbenos al WhatsApp: +593 96 967 2237",
     })
   }
 }

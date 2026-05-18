@@ -50,7 +50,7 @@ function Nav() {
         <Link href="/login" className="btn btn-ghost" style={{ padding: ".5rem 1rem", fontSize: ".82rem" }}>
           <i className="fa-solid fa-arrow-right-to-bracket" /> Ingresar
         </Link>
-        <a href="https://wa.me/593999999999" className="btn btn-primary" style={{ padding: ".5rem 1.1rem", fontSize: ".82rem" }}>
+        <a href="https://wa.me/593969672237" className="btn btn-primary" style={{ padding: ".5rem 1.1rem", fontSize: ".82rem" }}>
           Cotizar
         </a>
       </div>
@@ -158,7 +158,7 @@ function Hero() {
             <Link href="/login" className="btn btn-primary">
               <i className="fa-solid fa-satellite" /> Ver plataforma en vivo
             </Link>
-            <a href="https://wa.me/593999999999" className="btn btn-ghost">
+            <a href="https://wa.me/593969672237" className="btn btn-ghost">
               <i className="fa-brands fa-whatsapp" style={{ color: "#25d366" }} /> Hablar con un asesor
             </a>
           </div>
@@ -323,7 +323,7 @@ function Cta() {
             Cotización en menos de 5 minutos. Instalación en 24-48 horas. Sin permanencia.
           </p>
           <div style={{ display: "flex", gap: ".85rem", marginTop: "1.6rem", flexWrap: "wrap" }}>
-            <a href="https://wa.me/593999999999" className="btn btn-primary">Solicitar cotización</a>
+            <a href="https://wa.me/593969672237" className="btn btn-primary">Solicitar cotización</a>
             <Link href="/login" className="btn btn-ghost">Ver demo de la plataforma</Link>
           </div>
         </div>
