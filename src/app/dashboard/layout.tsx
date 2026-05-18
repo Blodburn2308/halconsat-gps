@@ -52,6 +52,7 @@ function Sidebar() {
     ? [
         { href: "/dashboard/admin",            label: "Dashboard",          icon: "fa-gauge-high", section: "OPERACIÓN" },
         { href: "/dashboard/admin/registros",  label: "Todos los Registros", icon: "fa-list-check" },
+        { href: "/dashboard/admin/usuarios",   label: "Clientes",           icon: "fa-users" },
         { href: "/agente",                     label: "Agente IA",          icon: "fa-robot",      section: "INTELIGENCIA" },
       ]
     : [
